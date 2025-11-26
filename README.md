@@ -320,7 +320,6 @@ int main() {
 }
 
 ```
----
 ## Basic Explanation Regarding The Code
 This C program finds the **best path between two routers** by implementing **Dijkstra’s algorithm**, where the “best” edge is determined by a **weighted combination of three metrics**:
 
@@ -333,16 +332,14 @@ So instead of minimizing only cost, the algorithm minimizes:
 ```
 effectiveCost = 0.5*cost + 0.3*delay + 0.2*(1/bandwidth)
 ```
----
 **What the code does**
 
 ### 1. **Loads the network graph**
 
 * The graph has 6 nodes: ITS, Singapore, Japan, Dubai, London, Eropa.
 * Each pair of nodes has cost, delay, and bandwidth.
-* `INF` means no connection.
+* INF means no connection.
 
----
 **Steps**
 ### **(A) Read user input**
 
@@ -379,8 +376,6 @@ Example:
 ITS -> Singapore -> London -> Eropa
 ```
 
----
-
 ## **(D) Compute metrics along the chosen path**
 
 By walking backward from target to start:
@@ -390,7 +385,6 @@ By walking backward from target to start:
 * Track **minimum bandwidth** (bottleneck)
 * Print final “effective” value from `minCost[target]`
 
----
 
 ### **FINAL OUTPUT**
 
@@ -401,5 +395,3 @@ The program shows:
 * Total delay
 * Bottleneck bandwidth
 * Total effective score (the multi-metric combined cost)
-
----
