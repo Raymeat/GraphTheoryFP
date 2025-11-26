@@ -1,4 +1,9 @@
 # GraphTheoryFP
+| Name           | NRP        |
+| ---            | ---        |
+| Alif Muflih Jauhary | 5025241003 |
+| Makna Alam Pratama | 5025241077 |
+| Rayen Yeriel Mangiwa | 5025241262 |
 
 ```C
 
