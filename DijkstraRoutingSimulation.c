@@ -147,7 +147,7 @@ int findMinNode() {
 
 
 
-void primModified(int start, int target) {
+void Dijkstra(int start, int target) {
 
     for (int i = 0; i < N; i++) {
 
@@ -249,7 +249,7 @@ int main() {
 
 
 
-    primModified(start, target);
+    Dijkstra(start, target);
 
     printPath(target);
 
@@ -308,4 +308,3 @@ int main() {
     return 0;
 
 }
-
