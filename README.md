@@ -325,6 +325,3 @@ int main() {
 
 ```
 ## Basic Explanation Regarding The Code
-
-
-Nilai efektif       : 4.0529
