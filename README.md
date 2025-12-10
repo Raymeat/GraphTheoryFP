@@ -348,6 +348,10 @@ It instantly shows you the best path from one router to all others
 4. Pick the source
 5. A Menu will pop up giving you options on what you want to do.
 6. Pick whichever one you desire
+## Flowchart
+
+<img width="701" height="451" alt="FlowchartForGraphTheoryFP" src="https://github.com/user-attachments/assets/fefb1350-db94-49ee-8fa1-40d5a49a839b" />
+
 ## Sample test case
 Input:
 
