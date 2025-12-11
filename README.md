@@ -437,8 +437,12 @@ DONE
 
 DONE
 
+0.1
+0.1
+0.8
+
 A
 ```
 Up to that point, it will give an output as shown below (not this exact one, but something similiar to this... point is, it will print out the routig table for each iterations/update you do)
 
-<img width="2026" height="345" alt="image" src="https://github.com/user-attachments/assets/d5e99020-66bb-4e43-a824-d2c99393b283" />
+<img width="853" height="200" alt="image" src="https://github.com/user-attachments/assets/f966260e-5417-411e-ae5a-244840ff73f1" />
