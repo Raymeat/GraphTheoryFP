@@ -350,7 +350,7 @@ It instantly shows you the best path from one router to all others
 6. Pick whichever one you desire
 ## Flowchart
 
-<img width="701" height="451" alt="FlowchartForGraphTheoryFP" src="https://github.com/user-attachments/assets/fefb1350-db94-49ee-8fa1-40d5a49a839b" />
+<img width="567" height="369" alt="image" src="https://github.com/user-attachments/assets/1089a62e-10b3-4026-8f3e-6bb4e327c541" />
 
 ## Sample test case
 Input:
