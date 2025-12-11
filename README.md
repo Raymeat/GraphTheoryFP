@@ -12,38 +12,35 @@
 #include <iomanip>
 using namespace std;
 
-const double INF = 1e9; // Use double for precise calculations
+const double INF = 1e9; 
 
-// --- 1. STRUCTURE TO HOLD DATA ---
+// --- STRUCTURE TO HOLD DATA ---
 struct Edge {
     int to;
-    double cost;      // Financial Cost
-    double delay;     // Latency (ms)
-    double bandwidth; // Bandwidth (Mbps)
+    double cost;      
+    double delay;     
+    double bandwidth; 
 };
 
 struct graph {
     int vertexCount;
     
-    // Adjacency List stores neighbors and edge properties
     vector<vector<Edge>> adjList;
-    
     map<string, int> nameToIndex;
     vector<string> indexToName;
     vector<long> nodeBandwidths;
     vector<bool> nodeStatus; 
 
-    // --- NEW: Global Weights (Stored here so they are remembered!) ---
-    double alpha = 0.5; // Default Cost Priority (50%)
-    double beta = 0.3;  // Default Delay Priority (30%)
-    double gamma = 0.2; // Default Bandwidth Priority (20%)
+    // --- GLOBAL WEIGHTS ---
+    double alpha = 0.5; 
+    double beta = 0.3;  
+    double gamma = 0.2; 
 
     void init(int v) {
         vertexCount = v;
         indexToName.resize(v);
         nodeBandwidths.resize(v);
         nodeStatus.resize(v, true); 
-
         adjList.clear();
         adjList.resize(v);
     }
@@ -54,7 +51,6 @@ struct graph {
         nodeBandwidths[index] = bandwidth;
     }
 
-    // --- NEW FEATURE: Update Weights Dynamically ---
     void update_weights(double a, double b, double c) {
         alpha = a;
         beta = b;
@@ -80,7 +76,6 @@ struct graph {
         cout << "[SUCCESS] Added Router '" << name << "' (Index: " << newIndex << ")" << endl;
     }
 
-    // --- CONNECTION FUNCTION ---
     void add_connection_symmetric(string u_name, string v_name, double cost, double delay) {
         if (nameToIndex.find(u_name) == nameToIndex.end() || 
             nameToIndex.find(v_name) == nameToIndex.end()) {
@@ -90,18 +85,14 @@ struct graph {
 
         int u = nameToIndex[u_name];
         int v = nameToIndex[v_name];
-
-        // Bottleneck Logic: The link is only as fast as the slowest router
         double link_bw = min((double)nodeBandwidths[u], (double)nodeBandwidths[v]);
 
-        // Check if connection already exists (Update it if it does)
         for(auto& edge : adjList[u]) {
             if(edge.to == v) {
                 cout << "[INFO] Connection exists. Updating values." << endl;
                 edge.cost = cost;
                 edge.delay = delay;
                 edge.bandwidth = link_bw;
-                // Update the reverse path too
                 for(auto& rev_edge : adjList[v]) {
                     if(rev_edge.to == u) {
                         rev_edge.cost = cost;
@@ -113,10 +104,8 @@ struct graph {
             }
         }
 
-        // Add new connection (Symmetric = Two-way)
         adjList[u].push_back({v, cost, delay, link_bw});
         adjList[v].push_back({u, cost, delay, link_bw});
-
         cout << "[SUCCESS] Connected: " << u_name << " <--> " << v_name 
              << " [Cost:" << cost << ", Delay:" << delay << ", BW:" << link_bw << "]" << endl;
     }
@@ -128,20 +117,16 @@ struct graph {
         else       cout << "[EVENT] Router " << name << " CRASHED." << endl;
     }
 
-    // --- DIJKSTRA ALGORITHM ---
+    // ==========================================
+    // METHOD 1: MODIFIED DIJKSTRA
+    // ==========================================
     void dijkstra(string startName) {
         if (nameToIndex.find(startName) == nameToIndex.end()) return;
-        
         int start = nameToIndex[startName];
-        if (!nodeStatus[start]) {
-            cout << "\n[CRITICAL] Source router " << startName << " is DOWN." << endl;
-            return;
-        }
+        if (!nodeStatus[start]) { cout << "\n[CRITICAL] Source is DOWN.\n"; return; }
 
         vector<double> dist(vertexCount, INF);
         vector<int> parent(vertexCount, -1);
-        
-        // Priority Queue: Always puts the smallest 'dist' at the top
         priority_queue<pair<double, int>, vector<pair<double, int>>, greater<pair<double, int>>> pq;
 
         pq.push({0, start});
@@ -156,11 +141,9 @@ struct graph {
 
             for (auto& edge : adjList[u]) {
                 int v = edge.to;      
-                if (!nodeStatus[v]) continue; // Skip dead routers
+                if (!nodeStatus[v]) continue; 
 
-                // --- THE SCALED FORMULA ---
-                // We use the member variables 'alpha', 'beta', 'gamma' here!
-                // (1.0 / bandwidth) * 1,000,000 scales the small decimal up so it matters.
+                // THE FORMULA
                 double effective_weight = (alpha * edge.cost) + 
                                           (beta * edge.delay) + 
                                           (gamma * (1.0 / edge.bandwidth) * 1000000.0);
@@ -172,52 +155,113 @@ struct graph {
                 }
             }
         }
+        print_table("MODIFIED DIJKSTRA", start, dist, parent);
+    }
 
-        // --- PRINTING THE ROUTING TABLE ---
-        cout << "\n" << string(95, '=') << endl;
-        cout << "                ROUTING TABLE (Alpha=" << alpha << ", Beta=" << beta << ", Gamma=" << gamma << ")" << endl;
-        cout << string(95, '=') << endl;
-        cout << left << setw(15) << "Dest" << "| " << setw(15) << "Eff. Cost" << "| " << setw(15) << "Next Hop" << "| " << "Full Path" << endl;
-        cout << string(95, '-') << endl;
+    // ==========================================
+    // METHOD 2: BELLMAN-FORD 
+    // ==========================================
+    void bellman_ford(string startName) {
+        if (nameToIndex.find(startName) == nameToIndex.end()) return;
+        int start = nameToIndex[startName];
+        if (!nodeStatus[start]) { return; }
+
+        vector<double> dist(vertexCount, INF);
+        vector<int> parent(vertexCount, -1);
+        dist[start] = 0;
+
+        // Iterate V-1 times
+        for (int i = 0; i < vertexCount - 1; i++) {
+            bool changed = false;
+            for (int u = 0; u < vertexCount; u++) {
+                if (dist[u] == INF) continue;
+                for (auto& edge : adjList[u]) {
+                    int v = edge.to;
+                    if (!nodeStatus[v]) continue;
+
+                    double weight = (alpha * edge.cost) + (beta * edge.delay) + 
+                                    (gamma * (1.0 / edge.bandwidth) * 1000000.0);
+
+                    if (dist[u] + weight < dist[v]) {
+                        dist[v] = dist[u] + weight;
+                        parent[v] = u;
+                        changed = true;
+                    }
+                }
+            }
+            if (!changed) break;
+        }
+        print_table("BELLMAN-FORD (Safe/Slow)", start, dist, parent);
+    }
+
+    // ==========================================
+    // METHOD 3: BFS
+    // ==========================================
+    void bfs(string startName) {
+        if (nameToIndex.find(startName) == nameToIndex.end()) return;
+        int start = nameToIndex[startName];
+        if (!nodeStatus[start]) { return; }
+
+        vector<double> hops(vertexCount, INF);
+        vector<int> parent(vertexCount, -1);
+        queue<int> q;
+
+        q.push(start);
+        hops[start] = 0;
+
+        while (!q.empty()) {
+            int u = q.front();
+            q.pop();
+
+            for (auto& edge : adjList[u]) {
+                int v = edge.to;
+                if (!nodeStatus[v]) continue;
+
+                if (hops[v] == INF) {
+                    hops[v] = hops[u] + 1;
+                    parent[v] = u;
+                    q.push(v);
+                }
+            }
+        }
+        print_table("BFS (Shortest Hops Only)", start, hops, parent, true);
+    }
+
+    void print_table(string title, int start, vector<double>& dist, vector<int>& parent, bool isBFS = false) {
+        cout << "\n" << string(90, '=') << endl;
+        cout << "           ALGORITHM: " << title << endl;
+        cout << string(90, '=') << endl;
+        if (isBFS) cout << left << setw(15) << "Dest" << "| " << setw(15) << "Hops Count" << "| " << "Path" << endl;
+        else       cout << left << setw(15) << "Dest" << "| " << setw(15) << "Total Cost" << "| " << "Path" << endl;
+        cout << string(90, '-') << endl;
 
         for (int i = 0; i < vertexCount; i++) {
-            if (i == start) continue; 
-
+            if (i == start) continue;
             cout << left << setw(15) << indexToName[i] << "| ";
 
             if (!nodeStatus[i]) {
-                cout << setw(15) << "INF" << "| " << setw(15) << "-" << "| HOST DOWN" << endl;
-                continue;
+                cout << setw(15) << "DOWN" << "| HOST DOWN" << endl; continue;
             }
-
             if (dist[i] == INF) {
-                cout << setw(15) << "Unreachable" << "| " << setw(15) << "-" << "| No Path" << endl;
-            } else {
-                cout << setw(15) << fixed << setprecision(2) << dist[i] << "| ";
-                
-                // Reconstruct Path Logic (Backtracking from Target -> Source)
-                int curr = i;
-                vector<string> pathStack;
-                while (curr != -1) {
-                    pathStack.push_back(indexToName[curr]);
-                    curr = parent[curr];
-                }
-
-                // Next Hop is the second to last element
-                if (pathStack.size() >= 2) 
-                    cout << setw(15) << pathStack[pathStack.size() - 2] << "| ";
-                else 
-                    cout << setw(15) << "-" << "| ";
-
-                // Print Full Path
-                for (int k = pathStack.size() - 1; k >= 0; k--) {
-                    cout << pathStack[k];
-                    if (k > 0) cout << " -> ";
-                }
-                cout << endl;
+                cout << setw(15) << "Unreach" << "| No Path" << endl; continue;
             }
+
+            cout << setw(15) << fixed << setprecision(2) << dist[i] << "| ";
+            
+            // Print Path
+            int curr = i;
+            vector<string> pathStack;
+            while (curr != -1) {
+                pathStack.push_back(indexToName[curr]);
+                curr = parent[curr];
+            }
+            for (int k = pathStack.size() - 1; k >= 0; k--) {
+                cout << pathStack[k];
+                if (k > 0) cout << " -> ";
+            }
+            cout << endl;
         }
-        cout << string(95, '=') << endl;
+        cout << string(90, '=') << endl;
     }
 };
 
@@ -234,43 +278,46 @@ int main() {
     for (int i = 0; i < n; i++) {
         string name;
         long bw;
-        cout << "Node " << i + 1 << ": ";
-        cin >> name >> bw;
+        cout << "Node " << i + 1 << ": "; cin >> name >> bw;
         g.set_node_data(i, name, bw);
     }
 
-    // --- INPUT CONNECTIONS ---
     cout << "\nDefine Connections (Format: [Neighbor] [Cost] [Delay])" << endl;
     cout << "Example: If A connects to B with Cost 50 and Delay 10, type: B 50 10" << endl;
     
     for (int i = 0; i < n; i++) {
         string u_name = g.indexToName[i];
         cout << "Node " << u_name << " connected to (Type 'DONE' to finish):" << endl;
-        
         string v_name;
         while (cin >> v_name) {
             if (v_name == "DONE") break;
-            
             double cost, delay;
-            // We must read Cost and Delay for the formula to work!
             if (!(cin >> cost >> delay)) break; 
-            
             g.add_connection_symmetric(u_name, v_name, cost, delay);
         }
     }
 
+    cout << "\n" << string(50, '-') << endl;
+    cout << ">>> CONFIGURATION: Set Routing Priorities <<<" << endl;
+    double start_a, start_b, start_c;
+    cout << "Alpha (Cost): "; cin >> start_a;
+    cout << "Beta (Delay): "; cin >> start_b;
+    cout << "Gamma (BW):   "; cin >> start_c;
+    g.update_weights(start_a, start_b, start_c);
+    cout << string(50, '-') << endl;
+
     string startNode;
-    cout << "\nSet Source Router: ";
-    cin >> startNode;
+    cout << "\nSet Source Router: "; cin >> startNode;
 
     while(true) {
-        g.dijkstra(startNode); // Runs immediately so you see results
+        
+        g.dijkstra(startNode); 
 
         cout << "\n[MENU]" << endl;
         cout << "1: Kill Router        2: Revive Router" << endl;
         cout << "3: Change Source      4: Add Connection" << endl;
         cout << "5: ADD NEW ROUTER     6: Exit" << endl;
-        cout << "7: CHANGE WEIGHTS (Alpha, Beta, Gamma)" << endl;
+        cout << "7: CHANGE WEIGHTS     8: COMPARE ALL ALGORITHMS" << endl;
         cout << "Select: ";
         int choice;
         if (!(cin >> choice)) break;
@@ -288,12 +335,8 @@ int main() {
         }
         else if (choice == 3) {
             cout << "New Source: "; cin >> target;
-            // Check if node exists before setting
-            if (g.nameToIndex.find(target) != g.nameToIndex.end()) {
-                startNode = target;
-            } else {
-                cout << "[ERROR] Node does not exist." << endl;
-            }
+            if (g.nameToIndex.find(target) != g.nameToIndex.end()) startNode = target;
+            else cout << "[ERROR] Node does not exist." << endl;
         }
         else if (choice == 4) {
             double c, d;
@@ -312,14 +355,26 @@ int main() {
         }
         else if (choice == 7) {
             double a, b, c;
-            cout << "\nEnter new weights (Sum should be 1.0 ideally):" << endl;
-            cout << "Alpha (Cost Priority): "; cin >> a;
-            cout << "Beta (Delay Priority): "; cin >> b;
-            cout << "Gamma (BW Priority):   "; cin >> c;
+            cout << "\nEnter new weights:" << endl;
+            cout << "Alpha (Cost): "; cin >> a;
+            cout << "Beta (Delay): "; cin >> b;
+            cout << "Gamma (BW):   "; cin >> c;
             g.update_weights(a, b, c);
         }
+        else if (choice == 8) {
+            cout << "\n\n>>> RUNNING ALGORITHM COMPARISON <<<" << endl;
+            g.dijkstra(startNode);
+            g.bellman_ford(startNode);
+            g.bfs(startNode);
+            
+            cout << "\n[ANALYSIS]" << endl;
+            cout << "- Dijkstra:    Fastest, Best for Weighted Graphs." << endl;
+            cout << "- Bellman:     Slow, Good for Negative Weights (useless here)." << endl;
+            cout << "- BFS:         Shortest HOPS only (Ignores Cost/Bandwidth)." << endl;
+            cout << "Press any key/letter to continue..." << endl;
+            string dummy; cin >> dummy;
+        }
     }
-
     return 0;
 }
 
